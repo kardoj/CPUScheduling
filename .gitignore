@@ -23,6 +23,7 @@ info
 unrelated
 .buildpath
 .project
+.gitignore
 
 # =========================
 # Operating System Files
