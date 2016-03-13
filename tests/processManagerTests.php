@@ -32,7 +32,7 @@
 		$processManager->distribute($processArray, $row);
 		$firstIsInWrite1 = $row->getWrite(1)->getCurrentTask()->getActivity() == "write" &&
 							$row->getWrite(1)->getCurrentTask()->getResourceNumber() == 1;
-		$secondIsNull = $row->getReadArray(2) == NULL;
+		$secondIsNull = $row->readIsEmpty(2);
 		$thirdIsInProcessor = $row->getProcessor()->getCurrentTask()->getActivity() == "use" &&
 								$row->getProcessor()->getCurrentTask()->getResourceNumber() == 0;
 		checkAndDisplay($name, $firstIsInWrite1 && $secondIsNull && $thirdIsInProcessor);		
@@ -147,11 +147,26 @@
 		$process1->getCurrentTask()->setTimeElapsed(3);
 		$process3->getCurrentTask()->setTimeElapsed(4);
 		$processManager->dropEndedProcesses($row);
-		$processorIsEmpty = $row->getProcessorString() == "";
 		$read1 = $row->getReadArray(1);
 		$read1IsStillRunning = $read1[0]->getCurrentTask()->getActivity() == "read";
-		$write2IsEmpty = $row->getWriteString(2) == "";
-		checkAndDisplay($name, $processorIsEmpty && $read1IsStillRunning && $write2IsEmpty);
+		checkAndDisplay($name, $row->processorIsEmpty() && $read1IsStillRunning && $row->writeIsEmpty(2));
+	}
+	
+	function dropCorrectFinishedProcessFromReadTest(){
+		// In read, there needs to be possible to drop processes from anywhere in the array
+		// This test makes sure that this is possible and working
+		$name = __FUNCTION__;
+		$CPUSchedulingMethod = FCFS;
+		$processManager = new ProcessManager($CPUSchedulingMethod);
+		$row = new Row();
+		$process1 = new Process(1, array(new Task("read", 1, 3)));
+		$process2 = new Process(2, array(new Task("read", 1, 1)));
+		$processArray = array($process1, $process2);
+		$processManager->distribute($processArray, $row);
+		$process2->getCurrentTask()->setTimeElapsed(1);
+		$processManager->dropEndedProcesses($row);
+		$correctProcessInReadAfterDrop = $row->getReadArray(1) == array($process1);
+		checkAndDisplay($name, $correctProcessInReadAfterDrop);
 	}
 	
 	distributeAllRunningDifferentSlotsTest();
@@ -164,4 +179,5 @@
 	distributeWrite1WhenWrite1OccupiedTest();
 	distributeReadyAndWaitTest();
 	drop2Of3ProcessesTest();
+	dropCorrectFinishedProcessFromReadTest();
 ?>

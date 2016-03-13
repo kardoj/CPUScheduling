@@ -46,40 +46,50 @@ class ProcessManager{
 		return false;
 	}
 	
-	public function distributeReadyAndWait($row, $CPUSchedulingMethod){
-		// if there is something in ready and processor is empty, move it to processor
-		if($row->getReadyString() != "" && $row->getProcessorString() == ""){
+	public function distributeReadyAndWait($row){
+		$this->setProcessorFromReady($row);
+		$this->setFromWait($row, 1);
+		$this->setFromWait($row, 2);		
+	}
+	
+	private function setFromWait($row, $resourceNumber){
+		$waitArray = $row->getWaitArray($resourceNumber);
+		$length = count($waitArray);
+		for($i = $length-1; $i>=0; $i--){
+			$process = $waitArray[$i];
+			$activity = $process->getCurrentTask()->getActivity();
+			if($activity == "read"){
+				$this->setRead($row, $process, $resourceNumber);
+			} else if($activity == "write"){
+				$this->setWrite($row, $process, $resourceNumber);
+			}
+		}		
+	}
+	
+	private function setRead($row, $process, $resourceNumber){
+		$resourceNumberIsCorrect = $process->getCurrentTask()->getResourceNumber() == $resourceNumber;
+		$writeIsEmpty = $row->writeIsEmpty($resourceNumber);
+		if($resourceNumberIsCorrect && $writeIsEmpty){
+				$row->appendRead($resourceNumber, $row->takeNextFromWait($resourceNumber));
+		}
+	}
+	
+	private function setWrite($row, $process, $resourceNumber){
+		$resourceNumberIsCorrect = $process->getCurrentTask()->getResourceNumber() == $resourceNumber;
+		$writeIsEmpty = $row->writeIsEmpty($resourceNumber);
+		$readIsEmpty = $row->readIsEmpty($resourceNumber);		
+		if($resourceNumberIsCorrect && $writeIsEmpty && $readIsEmpty){
+			$row->setWrite($resourceNumber, $row->takeNextFromWait($resourceNumber));
+		}
+	}
+	
+	private function setProcessorFromReady($row){
+		$readyArray = $row->getReadyArray();
+		$readyNotEmpty = !empty($readyArray);
+		$processor = $row->getProcessor();
+		$processorIsEmpty = $processor == NULL;
+		if($readyNotEmpty && $processorIsEmpty){
 			$row->setProcessor($row->takeNextFromReady());
-		}
-		
-		if($row->getWaitString(1) != ""){
-			$process = $row->getNextFromWait(1);
-			$activityIsRead = $process->getCurrentTask()->getActivity() == "read";
-			$activityIsWrite = $process->getCurrentTask()->getActivity() == "write";
-			$resourceNumberIs1 = $process->getCurrentTask()->getResourceNumber() == 1;
-			$write1IsEmpty = $row->getWrite(1) == NULL;
-			$read1IsEmpty = $row->getReadArray(1) == array();
-			
-			if($activityIsRead && $resourceNumberIs1 && $write1IsEmpty){
-				$row->appendRead(1, $row->takeNextFromWait(1));
-			} else if($activityIsWrite && $resourceNumberIs1 && $write1IsEmpty && $read1IsEmpty){
-				$row->setWrite(1, $row->takeNextFromWait(1));
-			}
-		}
-		
-		if($row->getWaitString(2) != ""){
-			$process = $row->getNextFromWait(2);
-			$activityIsRead = $process->getCurrentTask()->getActivity() == "read";
-			$activityIsWrite = $process->getCurrentTask()->getActivity() == "write";
-			$resourceNumberIs2 = $process->getCurrentTask()->getResourceNumber() == 2;
-			$write2IsEmpty = $row->getWrite(2) == NULL;
-			$read2IsEmpty = $row->getReadArray(2) == array();
-				
-			if($activityIsRead && $resourceNumberIs2 && $write2IsEmpty){
-				$row->appendRead(2, $row->takeNextFromWait(2));
-			} else if($activityIsWrite && $resourceNumberIs2 && $write2IsEmpty && $read2IsEmpty){
-				$row->setWrite(2, $row->takeNextFromWait(2));
-			}
 		}		
 	}
 	
@@ -109,15 +119,6 @@ class ProcessManager{
 	}
 	
 	public function dropEndedProcesses($row){
-		/*
-		$arrayOfProcesses = $this->getArrayOfProcessesInPR1R2W1W2($row);
-		foreach($arrayOfProcesses as $process){
-			$task = $process->getCurrentTask();
-			if($task->getTimeElapsed() == $task->getDuration()){
-				$row->dropProcessNumber($process->getProcessNumber());
-			}
-		}
-		*/
 		if($row->getProcessor() != NULL){
 			$task = $row->getProcessor()->getCurrentTask();
 			if($task->getTimeElapsed() == $task->getDuration()){
@@ -127,22 +128,22 @@ class ProcessManager{
 		foreach($row->getReadArray(1) as $one){
 			$task = $one->getCurrentTask();
 			if($task->getTimeElapsed() == $task->getDuration()){
-				$row->dropNextFromRead(1);
+				$row->dropFromRead(1, $one);
 			}
 		}
 		foreach($row->getReadArray(2) as $one){
 			$task = $one->getCurrentTask();
 			if($task->getTimeElapsed() == $task->getDuration()){
-				$row->dropNextFromRead(2);
+				$row->dropFromRead(2, $one);
 			}
 		}
-		if($row->getWrite(1) != NULL){			
+		if(!$row->writeIsEmpty(1)){			
 			$task = $row->getWrite(1)->getCurrentTask();
 			if($task->getTimeElapsed() == $task->getDuration()){
 				$row->dropFromWrite(1);
 			}
 		}
-		if($row->getWrite(2) != NULL){			
+		if(!$row->writeIsEmpty(2)){			
 			$task = $row->getWrite(2)->getCurrentTask();
 			if($task->getTimeElapsed() == $task->getDuration()){
 				$row->dropFromWrite(2);
@@ -166,7 +167,7 @@ class ProcessManager{
 	}
 	
 	private function setProcessor($process, $row){
-		if($row->getProcessorString() == ""){
+		if($row->processorIsEmpty()){
 			$row->setProcessor($process);
 		} else {
 			$row->appendReady($process, $this->CPUSchedulingMethod);
@@ -176,19 +177,25 @@ class ProcessManager{
 	private function setByResource($resourceNumber, $process, $row){
 		$task = $process->getCurrentTask();
 		$activity = $task->getActivity();
+		$writeString = $row->getProcessStringFromProcessArray(
+							array($row->getWrite($resourceNumber))
+					   );
 		if($activity == "read"){
-			if($row->getWriteString($resourceNumber) == ""){
+			if($writeString == ""){
 				$row->appendRead($resourceNumber, $process);
 			} else {
 				$row->appendWait($resourceNumber, $process);
 			}
-		} else if($activity == "write" && $row->getWriteString($resourceNumber) == ""){
-			if($row->getReadString($resourceNumber) == ""){
+		} else if($activity == "write" && $writeString == ""){
+			$readString = $row->getProcessStringFromProcessArray(
+								$row->getReadArray($resourceNumber)
+						  );
+			if($readString == ""){
 				$row->setWrite($resourceNumber, $process);
 			} else {
 				$row->appendWait($resourceNumber, $process);
 			}
-		} else if($activity == "write" && $row->getWriteString($resourceNumber) != ""){
+		} else if($activity == "write" && $writeString != ""){
 			$row->appendWait($resourceNumber, $process);
 		} 
 	}

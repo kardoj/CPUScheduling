@@ -195,62 +195,64 @@
 	function takeNextFromReadyTest(){
 		$row = new Row();
 		$CPUSchedulingMethod = FCFS;
-		$row->appendReady(new Process(1, array(new Task("use", 0, 2))), $CPUSchedulingMethod);
-		$row->appendReady(new Process(2, array(new Task("use", 0, 3))), $CPUSchedulingMethod);
-		$first = $row->takeNextFromReady();
-		$readyString = $row->getReadyString();
-		$second = $row->takeNextFromReady();
-		$readyString2 = $row->getReadyString();
-		checkAndDisplay(__FUNCTION__, $first->getProcessNumber() == 1 && 
-								$second->getProcessNumber() == 2 && 
-								$readyString == "2" &&
-								$readyString2 == ""
-		);	
+		$process1 = new Process(1, array(new Task("use", 0, 2)));
+		$process2 = new Process(2, array(new Task("use", 0, 3)));
+		$row->appendReady($process1, $CPUSchedulingMethod);
+		$row->appendReady($process2, $CPUSchedulingMethod);
+		$takenFirst = $row->takeNextFromReady();
+		$readyArrayCorrectAfterFirstTaken = $row->getReadyArray() == array($process2);
+		$takenSecond = $row->takeNextFromReady();
+		$readyArrayAfterSecondTaken = $row->getReadyArray();
+		$readyArrayCorrectAfterSecondTaken = empty($readyArrayAfterSecondTaken);
+		$takenFirstProcessNumberIs1 = $takenFirst->getProcessNumber() == 1;
+		$takenSecondProcessNumberIs2 = $takenSecond->getProcessNumber() == 2;
+		$expression = $takenFirstProcessNumberIs1 && 
+					  $takenSecondProcessNumberIs2 && 
+					  $readyArrayCorrectAfterFirstTaken && 
+					  $readyArrayCorrectAfterSecondTaken;
+		checkAndDisplay(__FUNCTION__, $expression);	
 	}
 	
 	function dropNextFromRead1Test(){
 		$row = new Row();
-		$row->appendRead(1, new Process(1, array(new Task("use", 0, 3))));
-		$read1String1 = $row->getReadString(1);
-		$row->dropNextFromRead(1);
-		$read1String2 = $row->getReadString(1);
-		checkAndDisplay(__FUNCTION__, $read1String1 == "1" && $read1String2 == "");
+		$process1 = new Process(1, array(new Task("read", 1, 3)));
+		$row->appendRead(1, $process1);
+		$read1ArrayCorrectAfterAppend = $row->getReadArray(1) == array($process1);
+		$row->dropFromRead(1, $process1);
+		$read1ArrayAfterDrop = $row->getReadArray(1);
+		$read1ArrayCorrectAfterDrop = empty($read1ArrayAfterDrop);
+		checkAndDisplay(__FUNCTION__, $read1ArrayCorrectAfterAppend && $read1ArrayCorrectAfterDrop);
 	}
 	
 	function dropNextFromRead2Test(){
 		$row = new Row();
-		$row->appendRead(2, new Process(1, array(new Task("use", 0, 3))));
-		$read1String1 = $row->getReadString(2);
-		$row->dropNextFromRead(2);
-		$read1String2 = $row->getReadString(2);
-		checkAndDisplay(__FUNCTION__, $read1String1 == "1" && $read1String2 == "");
+		$process1 = new Process(1, array(new Task("read", 1, 3)));
+		$row->appendRead(2, $process1);
+		$read2ArrayCorrectAfterAppend = $row->getReadArray(2) == array($process1);
+		$row->dropFromRead(2, $process1);
+		$read2ArrayAfterDrop = $row->getReadArray(2);
+		$read2ArrayCorrectAfterDrop = empty($read2ArrayAfterDrop);
+		checkAndDisplay(__FUNCTION__, $read2ArrayCorrectAfterAppend && $read2ArrayCorrectAfterDrop);
 	}
 	
 	function dropFromWrite1Test(){
 		$row = new Row();
-		$row->setWrite(1, new Process(1, array(new Task("use", 0, 3))));
-		$writeString1 = $row->getWriteString(1);
+		$process1 = new Process(1, array(new Task("use", 0, 3)));
+		$row->setWrite(1, $process1);
+		$write1CorrectAfterAppend = $row->getWrite(1) == $process1;
 		$row->dropFromWrite(1);
-		$writeString2 = $row->getWriteString(1);
-		checkAndDisplay(__FUNCTION__, $writeString1 == "1" && $writeString2 == "");
+		$write1CorrectAfterDrop = $row->getWrite(1) == NULL;
+		checkAndDisplay(__FUNCTION__, $write1CorrectAfterAppend && $write1CorrectAfterDrop);
 	}
 	
 	function dropFromWrite2Test(){
 		$row = new Row();
-		$row->setWrite(2, new Process(1, array(new Task("use", 0, 3))));
-		$writeString1 = $row->getWriteString(2);
+		$process1 = new Process(1, array(new Task("use", 0, 3)));
+		$row->setWrite(2, $process1);
+		$write2CorrectAfterAppend = $row->getWrite(2) == $process1;
 		$row->dropFromWrite(2);
-		$writeString2 = $row->getWriteString(2);
-		checkAndDisplay(__FUNCTION__, $writeString1 == "1" && $writeString2 == "");
-	}
-	
-	function rowProcessorPointerTest(){
-		$row = new Row();
-		$processorPointer = $row->getProcessor();
-		$processorString = $processorPointer;
-		$row->setProcessor(new Process(1, array(new Task("use", 0, 3))));
-		$processorString2 = $processorPointer;
-		checkAndDisplay(__FUNCTION__, $processorString == $processorString2);
+		$write2CorrectAfterDrop = $row->getWrite(2) == NULL;
+		checkAndDisplay(__FUNCTION__, $write2CorrectAfterAppend && $write2CorrectAfterDrop);
 	}
 	
 	function empty_getProcessStringFromProcessArrayTest(){
@@ -317,7 +319,6 @@
 	dropNextFromRead2Test();
 	dropFromWrite1Test();
 	dropFromWrite2Test();
-	rowProcessorPointerTest();
 	
 	empty_getProcessStringFromProcessArrayTest();
 	singleProcess_getProcessStringFromProcessArrayTest();
