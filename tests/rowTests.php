@@ -286,6 +286,72 @@
 		checkAndDisplay(__FUNCTION__, $expression);	
 	}
 	
+	function appendReadySJNTest(){
+		$row = new Row();
+		$CPUSchedulingMethod = SJN;
+		$process1 = new Process(1, array(new Task("use", 0, 2)));
+		$process2 = new Process(2, array(new Task("use", 0, 3)));
+		$process3 = new Process(3, array(new Task("use", 0, 1)));
+		$row->appendReady($process1, $CPUSchedulingMethod);
+		$row->appendReady($process2, $CPUSchedulingMethod);
+		$row->appendReady($process3, $CPUSchedulingMethod);
+		$expression = $row->getReadyArray() == array($process2, $process1, $process3);
+		checkAndDisplay(__FUNCTION__, $expression);
+	}
+	
+	function appendReadySJNEqualTasksTest(){
+		$row = new Row();
+		$CPUSchedulingMethod = SJN;
+		$process1 = new Process(1, array(new Task("use", 0, 3)));
+		$process2 = new Process(2, array(new Task("use", 0, 3)));
+		$process3 = new Process(3, array(new Task("use", 0, 1)));
+		$row->appendReady($process1, $CPUSchedulingMethod);
+		$row->appendReady($process2, $CPUSchedulingMethod);
+		$row->appendReady($process3, $CPUSchedulingMethod);
+		$expression = $row->getReadyArray() == array($process2, $process1, $process3);
+		checkAndDisplay(__FUNCTION__, $expression);
+	}
+	
+	function appendReadySRTNTest(){
+		$row = new Row();
+		$CPUSchedulingMethod = SRTN;
+		$process1 = new Process(1, array(new Task("use", 0, 2)));
+		$process2 = new Process(2, array(new Task("use", 0, 3)));
+		$process3 = new Process(3, array(new Task("use", 0, 1)));
+		$row->appendReady($process1, $CPUSchedulingMethod);
+		$row->appendReady($process2, $CPUSchedulingMethod);
+		$row->appendReady($process3, $CPUSchedulingMethod);
+		$expression = $row->getReadyArray() == array($process2, $process1, $process3);
+		checkAndDisplay(__FUNCTION__, $expression);
+	}
+	
+	function appendReadySRTNTest2(){
+		$row = new Row();
+		$CPUSchedulingMethod = SRTN;
+		$process1 = new Process(1, array(new Task("use", 0, 2)));
+		$process1->getCurrentTask()->setTimeElapsed(1);
+		$process2 = new Process(2, array(new Task("use", 0, 3)));
+		$process3 = new Process(3, array(new Task("use", 0, 1)));
+		$row->appendReady($process1, $CPUSchedulingMethod);
+		$row->appendReady($process2, $CPUSchedulingMethod);
+		$row->appendReady($process3, $CPUSchedulingMethod);
+		$expression = $row->getReadyArray() == array($process2, $process3, $process1);
+		checkAndDisplay(__FUNCTION__, $expression);
+	}
+	
+	function appendReadySRTNEqualTasksTest(){
+		$row = new Row();
+		$CPUSchedulingMethod = SRTN;
+		$process1 = new Process(1, array(new Task("use", 0, 3)));
+		$process2 = new Process(2, array(new Task("use", 0, 3)));
+		$process3 = new Process(3, array(new Task("use", 0, 3)));
+		$row->appendReady($process1, $CPUSchedulingMethod);
+		$row->appendReady($process2, $CPUSchedulingMethod);
+		$row->appendReady($process3, $CPUSchedulingMethod);
+		$expression = $row->getReadyArray() == array($process3, $process2, $process1);
+		checkAndDisplay(__FUNCTION__, $expression);
+	}
+	
 	
 	appendReadyFCFSTest();
 	singleProcess_appendReadyFCFSTest();
@@ -323,5 +389,12 @@
 	empty_getProcessStringFromProcessArrayTest();
 	singleProcess_getProcessStringFromProcessArrayTest();
 	getProcessStringFromProcessArrayTest();
+	
+	appendReadySJNTest();
+	appendReadySJNEqualTasksTest();
+	
+	appendReadySRTNTest();
+	appendReadySRTNTest2();
+	appendReadySRTNEqualTasksTest();
 	
 ?>

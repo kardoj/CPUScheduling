@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>CPU Scheduling</title>
+  <script src="js/script.js"></script>
   <meta name="description" content="CPU Scheduling solver">
   <meta name="author" content="Kardo Jõeleht">
   <meta name="year" content="2016">
@@ -11,11 +12,13 @@
 	<form action="index.php">
 	<fieldset>
 		<legend>Sisendid</legend>
-		Protsess 1: <input type="text" name="process1" placeholder="P-1:R2-2 ..." value="<?php if(isSet($_REQUEST["process1"])){echo $_REQUEST["process1"];}?>" />
+		Protsess 1: <input type="text" id="process1" name="process1" placeholder="P-1:R2-2 ..." value="<?php if(isSet($_REQUEST["process1"])){echo $_REQUEST["process1"];}?>" />
 		<br>
-		Protsess 2: <input type="text" name="process2" value="<?php if(isSet($_REQUEST["process2"])){echo $_REQUEST["process2"];}?>" />
+		Protsess 2: <input type="text" id="process2" name="process2" value="<?php if(isSet($_REQUEST["process2"])){echo $_REQUEST["process2"];}?>" />
 		<br>
-		Protsess 3: <input type="text" name="process3" value="<?php if(isSet($_REQUEST["process3"])){echo $_REQUEST["process3"];}?>" />
+		Protsess 3: <input type="text" id="process3" name="process3" value="<?php if(isSet($_REQUEST["process3"])){echo $_REQUEST["process3"];}?>" />
+		<br>
+		<input type="button" id="emptyButton" value="Tühjenda väljad" />
 	</fieldset>
 	<fieldset>
 		<legend>Protsessori juhtimismeetod</legend>
@@ -37,7 +40,7 @@
 					if(isSet($_REQUEST["RRTime"])){
 						$time = $_REQUEST["RRTime"];
 					}
-					echo " <input type='text' name='RRTime' value='{$time}' placeholder='Ajakvant' />";
+					echo " <input type='text' id='rrtime' name='RRTime' value='{$time}' placeholder='Ajakvant' />";
 				}
 			}
 		?>
@@ -55,7 +58,7 @@
 		require_once 'classes/Process.class.php';
 		require_once 'classes/Task.class.php';
 		require_once 'classes/Solution.class.php';
-	
+
 		if(isSet($_REQUEST["process1"]) &&
 			isSet($_REQUEST["process2"]) &&
 			isSet($_REQUEST["process3"])){
@@ -66,7 +69,7 @@
 			$process3 = new Process(3, getTaskArrayFromString($_REQUEST["process3"], ":"));
 			$processArray = filterOutProcessesWithoutTasks(array($process1, $process2, $process3));
 			$CPUSchedulingMethod = FCFS;
-			
+
 			$RRTime = 0;
 			if($_REQUEST["scheduling"] == "fcfs"){
 				$CPUSchedulingMethod = FCFS;
@@ -78,52 +81,58 @@
 				$CPUSchedulingMethod = RR;
 				$RRTime = $_REQUEST["RRTime"];
 			}
-			
+
 			$processManager = new ProcessManager($CPUSchedulingMethod);
 			$solution = new Solution();
 			
+			initializeStartWhenNeeded($row, $processArray, $CPUSchedulingMethod, $processManager);
 			for($i=0; $i<$ticks; $i++){
-				if($CPUSchedulingMethod == SJN){
-					setStartingLineUpForProcessor($row, $processArray, $CPUSchedulingMethod, $processManager);
-				} else if($CPUSchedulingMethod == SRTN){
-					moveFromProcessorToReady($row, $CPUSchedulingMethod);
-					setStartingLineUpForProcessor($row, $processArray, $CPUSchedulingMethod, $processManager);
-				} else if($CPUSchedulingMethod == RR){
-					if($row->getProcessor() != NULL){
-						if($row->getProcessor()->getCurrentTask()->getTimeElapsed() % $RRTime == 0){
-							$row->appendReady($row->takeFromProcessor(), $CPUSchedulingMethod);
-						}
-					}
-				}
-				$processManager->distributeReadyAndWait($row, $CPUSchedulingMethod);
-				$processManager->distribute($processArray, $row);
+		        $processManager->distributeToReadyAndWait($processArray, $row);
+		        $processManager->distributeReadyAndWait($row);
+		        //echo "<pre>"; print_r($row->getReadyArray()); echo "</pre>";
 				$processManager->incrementTaskTimeElapsed($row);
 				$solution->addRow($row->getRowSnapShotObject());
 				$processManager->dropEndedProcesses($row);
+				moveProcessBackToReadyFromProcessorIfNeeded($CPUSchedulingMethod, $row, $RRTime);
 				$processManager->setNextTasks($processArray);
-				
-// 				echo "<pre>";
-// 				print_r($process2);
-// 				echo "</pre>";
-				
 			}
 			$solution->outputResultHTML();
 		}
 		
+		function moveProcessBackToReadyFromProcessorIfNeeded($CPUSchedulingMethod, $row, $RRTime){
+			if($CPUSchedulingMethod == SRTN){
+				moveFromProcessorToReady($row, $CPUSchedulingMethod);
+			} else if($CPUSchedulingMethod == RR){
+				if($row->getProcessor() != NULL){
+					if($row->getProcessor()->getCurrentTask()->getTimeElapsed() % $RRTime == 0){
+						$row->appendReady($row->takeFromProcessor(), $CPUSchedulingMethod);
+					}
+				}
+			}			
+		}
+		
+		function initializeStartWhenNeeded($row, $processArray, $CPUSchedulingMethod, $processManager){
+			if($CPUSchedulingMethod == SJN){
+				setStartingLineUpForProcessor($row, $processArray, $CPUSchedulingMethod, $processManager);
+			} else if($CPUSchedulingMethod == SRTN){
+				setStartingLineUpForProcessor($row, $processArray, $CPUSchedulingMethod, $processManager);
+			}			
+		}
+
 		function moveFromProcessorToReady($row, $CPUSchedulingMethod){
 			if($row->getProcessor() != NULL){
 				$row->appendReady($row->takeFromProcessor(), $CPUSchedulingMethod);
 			}
 		}
-		
+
 		function setStartingLineUpForProcessor($row, $processArray, $CPUSchedulingMethod, $processManager){
 			foreach($processArray as $process){
 				if($process->getCurrentTask()->getActivity() == "use" && !$processManager->isDistributed($process, $row)){
 					$row->appendReady($process, $CPUSchedulingMethod);
 				}
-			}			
+			}
 		}
-		
+
 		function getTaskArrayFromString($string, $delimiter){
 			$tasks = array();
 			if($string != ""){
@@ -150,7 +159,7 @@
 			}
 			return $tasks;
 		}
-		
+
 		function filterOutProcessesWithoutTasks($processArray){
 			$filtered = array();
 			foreach($processArray as $process){

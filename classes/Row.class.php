@@ -5,9 +5,9 @@ class Row{
 	private $wait = array(NULL, array(), array()); // $wait[1] = resource 1 wait, $wait[2] = resource 2 wait
 	private $read = array(NULL, array(), array());
 	private $write = array(NULL, NULL, NULL);
-	
+
 	public function Row(){}
-	
+
 	public function appendReady($process, $CPUSchedulingMethod){
 		if($CPUSchedulingMethod == FCFS){
 			array_unshift($this->ready, $process);
@@ -21,70 +21,70 @@ class Row{
 			array_unshift($this->ready, $process);
 		}
 	}
-		
+	
 	public function getReadyArray(){
 		return $this->ready;
 	}
-	
+
 	public function takeNextFromReady(){
 		$nextFromReady = $this->ready[count($this->ready)-1];
 		array_pop($this->ready);
 		return $nextFromReady;
 	}
-	
+
 	public function processorIsEmpty(){
 		return $this->isEmpty($this->processor);
 	}
-	
+
 	public function setProcessor($process){
 		$this->processor = $process;
 	}
-	
+
 	public function getProcessor(){
 		return $this->processor;
 	}
-	
+
 	public function takeFromProcessor(){
 		$process = $this->processor;
 		$this->processor = NULL;
 		return $process;
 	}
-	
+
 	public function dropFromProcessor(){
 		$this->processor = NULL;
 	}
-	
+
 	public function appendWait($which, $process){
 		array_unshift($this->wait[$which], $process);
 	}
-	
+
 	public function getWaitArray($which){
 		return $this->wait[$which];
 	}
-	
+
 	public function getNextFromWait($which){
 		$nextFromWait = $this->wait[$which][count($this->wait[$which])-1];
 		return $nextFromWait;
 	}
-	
+
 	public function takeNextFromWait($which){
 		$nextFromWait = $this->wait[$which][count($this->wait[$which])-1];
 		array_pop($this->wait[$which]);
 		return $nextFromWait;
 	}
-	
+
 	public function readIsEmpty($which){
 		return $this->isEmpty($this->getReadArray($which));
 	}
-	
+
 	public function appendRead($which, $process){
 		array_unshift($this->read[$which], $process);
 	}
-	
+
 	public function getReadArray($which){
 		return $this->read[$which];
 	}
-	
+
 	public function dropFromRead($which, $process){
 		$readArray = $this->getReadArray($which);
 		$newReadArray = array();
@@ -95,23 +95,23 @@ class Row{
 		}
 		$this->read[$which] = $newReadArray;
 	}
-	
+
 	public function writeIsEmpty($which){
 		return $this->isEmpty($this->write[$which]);
 	}
-	
+
 	public function setWrite($which, $process){
 		$this->write[$which] = $process;
 	}
-	
+
 	public function getWrite($which){
 		return $this->write[$which];
 	}
-	
+
 	public function dropFromWrite($which){
 		$this->write[$which] = NULL;
 	}
-	
+
 	public function getRowSnapshotObject(){
 		$snap = new StdClass();
 		$snap->ready = $this->getProcessStringFromProcessArray($this->getReadyArray());
@@ -124,7 +124,7 @@ class Row{
 		$snap->write2 = $this->getProcessStringFromProcessArray(array($this->getWrite(2)));
 		return $snap;
 	}
-	
+
 	public function getProcessStringFromProcessArray($processArray){
 		$returnString = "";
 		foreach($processArray as $process){
@@ -134,7 +134,7 @@ class Row{
 		}
 		return $returnString;
 	}
-	
+
 	private function isEmpty($var){
 		if(empty($var)){
 			return true;
@@ -151,7 +151,7 @@ function cmpSJN($a, $b){
 	$aProcessNumber = $a->getProcessNumber();
 	$bProcessNumber = $b->getProcessNumber();
 	if($aTime == $bTime){
-		return $aProcessNumber > $bProcessNumber;
+		return $aProcessNumber < $bProcessNumber;
 	}
 	return $aTime < $bTime;
 }
